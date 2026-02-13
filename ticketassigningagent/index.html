@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNOW AutoAssign Bot — Design Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --bg-primary: #0B0E14;
+  --bg-secondary: #111620;
+  --bg-card: #161B27;
+  --bg-card-hover: #1C2333;
+  --accent-cyan: #00E5CC;
+  --accent-orange: #FF6B35;
+  --accent-blue: #3B82F6;
+  --accent-purple: #A855F7;
+  --accent-rose: #FB7185;
+  --text-primary: #E8ECF4;
+  --text-secondary: #8B95A8;
+  --text-muted: #5A6378;
+  --border-color: #1E2636;
+  --border-accent: #2A3548;
+  --shadow-glow: 0 0 40px rgba(0, 229, 204, 0.08);
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+.dark { /* already dark by default */ }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 3px; }
+
+/* ── Navigation ── */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(11, 14, 20, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--bg-primary);
+  font-weight: 700;
+}
+
+.nav-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+}
+
+.nav-title span {
+  color: var(--accent-cyan);
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.nav-tab {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s;
+  border: none;
+  background: none;
+  white-space: nowrap;
+}
+
+.nav-tab:hover { color: var(--text-primary); }
+
+.nav-tab.active {
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+  font-weight: 700;
+}
+
+.nav-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 107, 53, 0.15);
+  color: var(--accent-orange);
+  border: 1px solid rgba(255, 107, 53, 0.25);
+}
+
+/* ── Sections ── */
+.section {
+  display: none;
+  padding: 100px 32px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeSlideIn 0.5s ease;
+}
+
+.section.active { display: block; }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-header {
+  margin-bottom: 48px;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.section-title .highlight {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-desc {
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 640px;
+  line-height: 1.7;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  transition: all 0.3s;
+}
+
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ── SECTION 1: Visual Design ── */
+.design-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.bot-identity-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 340px;
+  text-align: center;
+}
+
+.bot-identity-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at center, rgba(0,229,204,0.06) 0%, transparent 60%);
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.bot-avatar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 24px;
+}
+
+.bot-avatar-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-cyan);
+  animation: ringRotate 8s linear infinite;
+}
+
+.bot-avatar-ring::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent-cyan);
+}
+
+@keyframes ringRotate { to { transform: rotate(360deg); } }
+
+.bot-avatar-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0D2137, #112840);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.bot-avatar-icon {
+  font-size: 48px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bot-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.bot-tagline {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.bot-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+
+.bot-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.design-specs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spec-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+}
+
+.spec-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.spec-icon.cyan { background: rgba(0,229,204,0.12); color: var(--accent-cyan); }
+.spec-icon.orange { background: rgba(255,107,53,0.12); color: var(--accent-orange); }
+.spec-icon.blue { background: rgba(59,130,246,0.12); color: var(--accent-blue); }
+.spec-icon.purple { background: rgba(168,85,247,0.12); color: var(--accent-purple); }
+
+.spec-title {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.spec-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Feature Grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.feature-item {
+  padding: 24px;
+  text-align: center;
+}
+
+.feature-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.feature-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.feature-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── SECTION 2: Flow Diagram ── */
+.flow-container {
+  position: relative;
+  padding: 40px 20px;
+}
+
+.flow-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.flow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.flow-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 48px;
+}
+
+.flow-node {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.flow-node.cyan { background: rgba(0,229,204,0.15); color: var(--accent-cyan); border: 2px solid rgba(0,229,204,0.3); }
+.flow-node.orange { background: rgba(255,107,53,0.15); color: var(--accent-orange); border: 2px solid rgba(255,107,53,0.3); }
+.flow-node.blue { background: rgba(59,130,246,0.15); color: var(--accent-blue); border: 2px solid rgba(59,130,246,0.3); }
+.flow-node.purple { background: rgba(168,85,247,0.15); color: var(--accent-purple); border: 2px solid rgba(168,85,247,0.3); }
+.flow-node.rose { background: rgba(251,113,133,0.15); color: var(--accent-rose); border: 2px solid rgba(251,113,133,0.3); }
+
+.flow-line {
+  width: 2px;
+  height: 100%;
+  min-height: 40px;
+  flex-grow: 1;
+}
+
+.flow-line.cyan { background: linear-gradient(to bottom, rgba(0,229,204,0.3), rgba(255,107,53,0.3)); }
+.flow-line.orange { background: linear-gradient(to bottom, rgba(255,107,53,0.3), rgba(59,130,246,0.3)); }
+.flow-line.blue { background: linear-gradient(to bottom, rgba(59,130,246,0.3), rgba(168,85,247,0.3)); }
+.flow-line.purple { background: linear-gradient(to bottom, rgba(168,85,247,0.3), rgba(251,113,133,0.3)); }
+
+.flow-content {
+  flex: 1;
+  padding-top: 6px;
+  padding-bottom: 24px;
+}
+
+.flow-title {
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+
+.flow-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.flow-detail-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.flow-detail-box .key {
+  color: var(--accent-cyan);
+}
+
+.flow-detail-box .val {
+  color: var(--text-primary);
+}
+
+.flow-detail-box .comment {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Decision diamond */
+.flow-decision {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.decision-branch {
+  padding: 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.decision-branch.yes {
+  background: rgba(0,229,204,0.06);
+  border: 1px solid rgba(0,229,204,0.15);
+}
+
+.decision-branch.no {
+  background: rgba(255,107,53,0.06);
+  border: 1px solid rgba(255,107,53,0.15);
+}
+
+.decision-label {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.decision-branch.yes .decision-label { color: var(--accent-cyan); }
+.decision-branch.no .decision-label { color: var(--accent-orange); }
+
+.decision-text {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── SECTION 3: Sample GUI ── */
+.gui-mockup {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.gui-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.gui-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.gui-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.gui-dot.red { background: #FF5F57; }
+.gui-dot.yellow { background: #FEBC2E; }
+.gui-dot.green { background: #28C840; }
+
+.gui-titlebar-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.gui-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 560px;
+}
+
+.gui-sidebar {
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gui-sidebar-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.gui-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.gui-sidebar-item:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+
+.gui-sidebar-item.active {
+  background: rgba(0,229,204,0.08);
+  color: var(--accent-cyan);
+}
+
+.gui-sidebar-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.gui-sidebar-count {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+}
+
+.gui-main {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: 560px;
+}
+
+.gui-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gui-main-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.gui-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gui-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.gui-btn-primary {
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+}
+
+.gui-btn-primary:hover {
+  background: #00CEB8;
+  box-shadow: 0 4px 16px rgba(0,229,204,0.25);
+}
+
+.gui-btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.gui-btn-secondary:hover {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+
+/* Ticket Table */
+.ticket-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ticket-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.ticket-table td {
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.ticket-table tbody tr {
+  transition: background 0.15s;
+}
+
+.ticket-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.ticket-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-blue);
+}
+
+.ticket-priority {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.priority-critical { background: rgba(251,113,133,0.12); color: var(--accent-rose); }
+.priority-high { background: rgba(255,107,53,0.12); color: var(--accent-orange); }
+.priority-medium { background: rgba(0,229,204,0.12); color: var(--accent-cyan); }
+.priority-low { background: rgba(59,130,246,0.12); color: var(--accent-blue); }
+
+.ticket-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.status-assigned .status-dot { background: var(--accent-cyan); }
+.status-pending .status-dot { background: var(--accent-orange); animation: statusPulse 1.5s infinite; }
+.status-resolved .status-dot { background: #22C55E; }
+
+.assignee-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assignee-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.assignee-name {
+  font-size: 13px;
+}
+
+/* Stats Bar */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.stat-value.cyan { color: var(--accent-cyan); }
+.stat-value.orange { color: var(--accent-orange); }
+.stat-value.blue { color: var(--accent-blue); }
+.stat-value.rose { color: var(--accent-rose); }
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Workload Bars */
+.workload-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+
+.workload-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workload-title i { color: var(--accent-purple); }
+
+.workload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.workload-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  width: 80px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workload-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.workload-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1s ease;
+}
+
+.workload-percent {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .nav { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  .nav-tabs { overflow-x: auto; }
+  .nav-badge { display: none; }
+  .section { padding: 90px 16px 32px; }
+  .design-hero { grid-template-columns: 1fr; }
+  .gui-layout { grid-template-columns: 1fr; }
+  .gui-sidebar { display: none; }
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .flow-decision { grid-template-columns: 1fr; }
+  .ticket-table { font-size: 12px; }
+  .ticket-table th:nth-child(4),
+  .ticket-table td:nth-child(4) { display: none; }
+}
+
+@media (max-width: 480px) {
+  .stats-bar { grid-template-columns: 1fr; }
+  .gui-controls { width: 100%; }
+  .gui-btn { flex: 1; justify-content: center; }
+  .ticket-table th:nth-child(3),
+  .ticket-table td:nth-child(3) { display: none; }
+}
+
+/* ── Assignment Animation ── */
+.assignment-animation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px;
+  margin: 24px 0;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-accent);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.anim-ticket-icon, .anim-bot-icon, .anim-user-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.anim-ticket-icon {
+  background: rgba(59,130,246,0.12);
+  color: var(--accent-blue);
+}
+
+.anim-bot-icon {
+  background: linear-gradient(135deg, rgba(0,229,204,0.15), rgba(59,130,246,0.15));
+  color: var(--accent-cyan);
+  animation: botPulse 2s ease-in-out infinite;
+}
+
+@keyframes botPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.anim-user-icon {
+  background: rgba(168,85,247,0.12);
+  color: var(--accent-purple);
+}
+
+.anim-arrows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.anim-arrows i {
+  animation: arrowMove 1.5s ease-in-out infinite;
+}
+
+@keyframes arrowMove {
+  0%, 100% { opacity: 0.3; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(4px); }
+}
+
+.anim-label {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ── Algo Box ── */
+.algo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.algo-card {
+  padding: 24px;
+  border-left: 3px solid;
+}
+
+.algo-card.w1 { border-color: var(--accent-cyan); }
+.algo-card.w2 { border-color: var(--accent-orange); }
+.algo-card.w3 { border-color: var(--accent-blue); }
+.algo-card.w4 { border-color: var(--accent-purple); }
+
+.algo-weight {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.algo-card.w1 .algo-weight { color: var(--accent-cyan); }
+.algo-card.w2 .algo-weight { color: var(--accent-orange); }
+.algo-card.w3 .algo-weight { color: var(--accent-blue); }
+.algo-card.w4 .algo-weight { color: var(--accent-purple); }
+
+.algo-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.algo-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Info Banner ── */
+.info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background: rgba(0,229,204,0.04);
+  border: 1px solid rgba(0,229,204,0.12);
+  border-radius: var(--radius);
+  margin-top: 40px;
+}
+
+.info-banner i {
+  color: var(--accent-cyan);
+  font-size: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.info-banner p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.info-banner strong {
+  color: var(--text-primary);
+}
+</style>
+</head>
+<body>
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-logo"><i class="fas fa-bolt"></i></div>
+    <div class="nav-title">SNOW <span>AutoAssign</span></div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchSection('design', this)">
+      <i class="fas fa-palette"></i>&nbsp; Visual Design
+    </button>
+    <button class="nav-tab" onclick="switchSection('flow', this)">
+      <i class="fas fa-diagram-project"></i>&nbsp; Flow Diagram
+    </button>
+    <button class="nav-tab" onclick="switchSection('gui', this)">
+      <i class="fas fa-display"></i>&nbsp; Sample GUI
+    </button>
+  </div>
+  <div class="nav-badge">DESIGN PHASE</div>
+</nav>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SECTION 1 : VISUAL DESIGN                 -->
+<!-- ══════════════════════════════════════════ -->
+<section id="design" class="section active">
+  <div class="section-header">
+    <div class="section-label">01 — Bot Identity &amp; Design Language</div>
+    <h1 class="section-title">Meet <span class="highlight">AutoAssign</span></h1>
+    <p class="section-desc">
+      An intelligent ServiceNow ticket routing bot that balances workloads,
+      matches expertise, and keeps your 50+ member team running at peak efficiency.
+    </p>
+  </div>
+
+  <div class="design-hero">
+    <!-- Bot Identity Card -->
+    <div class="card bot-identity-card">
+      <div class="bot-avatar">
+        <div class="bot-avatar-ring"></div>
+        <div class="bot-avatar-inner">
+          <i class="fas fa-robot bot-avatar-icon"></i>
+        </div>
+      </div>
+      <div class="bot-name">AutoAssign</div>
+      <div class="bot-tagline">ServiceNow Intelligent Ticket Router</div>
+      <div class="bot-status">
+        <span class="bot-status-dot"></span>
+        ONLINE — Monitoring Queue
+      </div>
+    </div>
+
+    <!-- Specs -->
+    <div class="design-specs">
+      <div class="card spec-card">
+        <div class="spec-icon cyan"><i class="fas fa-brain"></i></div>
+        <div>
+          <div class="spec-title">AI-Powered Routing</div>
+          <div class="spec-text">Uses LLM analysis to understand ticket content, classify categories, and match with the best-suited team member.</div>
+        </div>
+      </div>
+      <div class="card spec-card">
+        <div class="spec-icon orange"><i class="fas fa-scale-balanced"></i></div>
+        <div>
+          <div class="spec-title">Workload Balancing</div>
+          <div class="spec-text">Real-time tracking of each agent's current ticket load, ensuring fair and even distribution across the team.</div>
+        </div>
+      </div>
+      <div class="card spec-card">
+        <div class="spec-icon blue"><i class="fas fa-user-gear"></i></div>
+        <div>
+          <div class="spec-title">Skill-Based Matching</div>
+          <div class="spec-text">Maps ticket categories to agent skill profiles — networking tickets go to network engineers, SAP tickets to SAP specialists.</div>
+        </div>
+      </div>
+      <div class="card spec-card">
+        <div class="spec-icon purple"><i class="fas fa-chart-line"></i></div>
+        <div>
+          <div class="spec-title">Analytics &amp; Insights</div>
+          <div class="spec-text">Dashboard with real-time KPIs: average assignment time, resolution rate, agent utilisation, and SLA compliance.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core Features -->
+  <div class="section-label" style="margin-bottom: 16px;">Core Capabilities</div>
+  <div class="features-grid">
+    <div class="card feature-item">
+      <div class="feature-icon" style="background:rgba(0,229,204,0.1);color:var(--accent-cyan);">
+        <i class="fas fa-bolt"></i>
+      </div>
+      <div class="feature-name">Instant Triage</div>
+      <div class="feature-desc">Auto-classifies incoming tickets by priority (P1–P4), category, and urgency within seconds.</div>
+    </div>
+    <div class="card feature-item">
+      <div class="feature-icon" style="background:rgba(255,107,53,0.1);color:var(--accent-orange);">
+        <i class="fas fa-clock-rotate-left"></i>
+      </div>
+      <div class="feature-name">SLA Awareness</div>
+      <div class="feature-desc">Factors in SLA deadlines and escalation rules to prioritise time-critical tickets.</div>
+    </div>
+    <div class="card feature-item">
+      <div class="feature-icon" style="background:rgba(59,130,246,0.1);color:var(--accent-blue);">
+        <i class="fas fa-arrows-rotate"></i>
+      </div>
+      <div class="feature-name">Round-Robin Fallback</div>
+      <div class="feature-desc">When skill match is equal, uses fair round-robin to maintain equitable distribution.</div>
+    </div>
+    <div class="card feature-item">
+      <div class="feature-icon" style="background:rgba(168,85,247,0.1);color:var(--accent-purple);">
+        <i class="fas fa-shield-halved"></i>
+      </div>
+      <div class="feature-name">Override &amp; Escalation</div>
+      <div class="feature-desc">Managers can manually override assignments. Unassignable tickets auto-escalate to leads.</div>
+    </div>
+    <div class="card feature-item">
+      <div class="feature-icon" style="background:rgba(251,113,133,0.1);color:var(--accent-rose);">
+        <i class="fas fa-calendar-check"></i>
+      </div>
+      <div class="feature-name">Availability Checks</div>
+      <div class="feature-desc">Integrates with shift calendars, PTO, and on-call schedules to skip unavailable agents.</div>
+    </div>
+    <div class="card feature-item">
+      <div class="feature-icon" style="background:rgba(34,197,94,0.1);color:#22C55E;">
+        <i class="fas fa-bell"></i>
+      </div>
+      <div class="feature-name">Smart Notifications</div>
+      <div class="feature-desc">Pings assignees via SNOW, email, or Slack/Teams with ticket summary and context.</div>
+    </div>
+  </div>
+
+  <!-- Animation -->
+  <div class="section-label" style="margin-bottom: 12px;">How It Works — At a Glance</div>
+  <div class="assignment-animation">
+    <div>
+      <div class="anim-ticket-icon"><i class="fas fa-ticket"></i></div>
+      <div class="anim-label">Incoming<br>Ticket</div>
+    </div>
+    <div class="anim-arrows">
+      <i class="fas fa-chevron-right"></i>
+      <i class="fas fa-chevron-right" style="animation-delay: 0.3s;"></i>
+    </div>
+    <div>
+      <div class="anim-bot-icon"><i class="fas fa-robot"></i></div>
+      <div class="anim-label">AutoAssign<br>Bot</div>
+    </div>
+    <div class="anim-arrows">
+      <i class="fas fa-chevron-right"></i>
+      <i class="fas fa-chevron-right" style="animation-delay: 0.3s;"></i>
+    </div>
+    <div>
+      <div class="anim-user-icon"><i class="fas fa-user-check"></i></div>
+      <div class="anim-label">Best-Fit<br>Agent</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SECTION 2 : OPERATIONAL FLOW DIAGRAM      -->
+<!-- ══════════════════════════════════════════ -->
+<section id="flow" class="section">
+  <div class="section-header">
+    <div class="section-label">02 — Operational Flow</div>
+    <h1 class="section-title">Assignment <span class="highlight">Pipeline</span></h1>
+    <p class="section-desc">
+      End-to-end lifecycle of a ticket from creation in ServiceNow to intelligent
+      assignment and notification.
+    </p>
+  </div>
+
+  <div class="flow-container">
+    <div class="flow-track">
+
+      <!-- Step 1 -->
+      <div class="flow-step">
+        <div class="flow-connector">
+          <div class="flow-node cyan"><i class="fas fa-inbox"></i></div>
+          <div class="flow-line cyan"></div>
+        </div>
+        <div class="flow-content">
+          <div class="flow-title">1. Ticket Ingestion</div>
+          <div class="flow-desc">
+            A new incident or request is created in ServiceNow (via portal, email, or API).
+            The bot monitors the assignment group queue in real-time via SNOW's Table API or
+            Business Rules trigger.
+          </div>
+          <div class="flow-detail-box">
+            <span class="key">Trigger:</span> <span class="val">sys_created_on IS NOT EMPTY</span><br>
+            <span class="key">Condition:</span> <span class="val">assigned_to IS EMPTY</span><br>
+            <span class="key">Group:</span> <span class="val">assignment_group = "IT Support Team"</span><br>
+            <span class="comment">// Only unassigned tickets in monitored groups</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="flow-step">
+        <div class="flow-connector">
+          <div class="flow-node orange"><i class="fas fa-tags"></i></div>
+          <div class="flow-line orange"></div>
+        </div>
+        <div class="flow-content">
+          <div class="flow-title">2. AI Classification &amp; Triage</div>
+          <div class="flow-desc">
+            The bot sends the ticket's short description, description body, and category
+            to the LLM for intelligent classification. The LLM returns a structured analysis.
+          </div>
+          <div class="flow-detail-box">
+            <span class="key">Input →</span> <span class="val">short_description + description + category</span><br>
+            <span class="key">Output →</span> <span class="val">{ skill_tags, priority_score, complexity }</span><br>
+            <span class="key">skill_tags:</span> <span class="val">["networking", "firewall", "vpn"]</span><br>
+            <span class="key">priority_score:</span> <span class="val">0.85</span> <span class="comment">// normalised urgency</span><br>
+            <span class="key">complexity:</span> <span class="val">"high"</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="flow-step">
+        <div class="flow-connector">
+          <div class="flow-node blue"><i class="fas fa-users"></i></div>
+          <div class="flow-line blue"></div>
+        </div>
+        <div class="flow-content">
+          <div class="flow-title">3. Agent Scoring &amp; Selection</div>
+          <div class="flow-desc">
+            Each available agent is scored against the ticket using a weighted algorithm.
+            The agent with the highest composite score is selected.
+          </div>
+          <div class="flow-decision">
+            <div class="decision-branch yes">
+              <div class="decision-label">✓ Best Match Found</div>
+              <div class="decision-text">Agent with highest composite score and capacity is selected. Proceed to assignment.</div>
+            </div>
+            <div class="decision-branch no">
+              <div class="decision-label">✗ No Match / All Busy</div>
+              <div class="decision-text">Ticket is escalated to team lead or placed in priority re-queue for next available agent.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="flow-step">
+        <div class="flow-connector">
+          <div class="flow-node purple"><i class="fas fa-pen-to-square"></i></div>
+          <div class="flow-line purple"></div>
+        </div>
+        <div class="flow-content">
+          <div class="flow-title">4. SNOW Update &amp; Assignment</div>
+          <div class="flow-desc">
+            The bot writes back to ServiceNow via REST API — setting the assigned_to field,
+            adding work notes with reasoning, and updating the state.
+          </div>
+          <div class="flow-detail-box">
+            <span class="key">PATCH</span> <span class="val">/api/now/table/incident/{'{sys_id}'}</span><br>
+            <span class="key">assigned_to:</span> <span class="val">"agent_sys_id"</span><br>
+            <span class="key">state:</span> <span class="val">2</span> <span class="comment">// In Progress</span><br>
+            <span class="key">work_notes:</span> <span class="val">"[AutoAssign] Routed to J. Kim</span><br>
+            <span class="val">&nbsp; Reason: Skill match (networking 95%),</span><br>
+            <span class="val">&nbsp; Workload: 3/8 tickets"</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="flow-step">
+        <div class="flow-connector">
+          <div class="flow-node rose"><i class="fas fa-bell"></i></div>
+        </div>
+        <div class="flow-content">
+          <div class="flow-title">5. Notification &amp; Feedback Loop</div>
+          <div class="flow-desc">
+            Assigned agent receives an instant notification with ticket context. The system
+            tracks acceptance time and resolution metrics for continuous algorithm improvement.
+          </div>
+          <div class="flow-detail-box">
+            <span class="key">Notify via:</span> <span class="val">SNOW notification + Slack/Teams webhook</span><br>
+            <span class="key">Includes:</span> <span class="val">Ticket #, Summary, Priority, SLA deadline</span><br>
+            <span class="key">Track:</span> <span class="val">acceptance_time, resolution_time, reassignment_count</span><br>
+            <span class="comment">// Feed metrics back for scoring refinement</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scoring Algorithm -->
+  <div class="section-label" style="margin-top: 32px; margin-bottom: 12px;">Scoring Algorithm Weights</div>
+  <div class="algo-grid">
+    <div class="card algo-card w1">
+      <div class="algo-weight">WEIGHT: 40%</div>
+      <div class="algo-name">Skill Match</div>
+      <div class="algo-desc">Cosine similarity between ticket skill tags and agent's expertise profile. Higher match = higher score.</div>
+    </div>
+    <div class="card algo-card w2">
+      <div class="algo-weight">WEIGHT: 30%</div>
+      <div class="algo-name">Current Workload</div>
+      <div class="algo-desc">Inverse ratio of active tickets to capacity. Agents with fewer tickets score higher for even distribution.</div>
+    </div>
+    <div class="card algo-card w3">
+      <div class="algo-weight">WEIGHT: 20%</div>
+      <div class="algo-name">Availability</div>
+      <div class="algo-desc">Binary and graded: on-shift + not on PTO + not in meeting. Considers timezone and on-call rotation.</div>
+    </div>
+    <div class="card algo-card w4">
+      <div class="algo-weight">WEIGHT: 10%</div>
+      <div class="algo-name">Historical Performance</div>
+      <div class="algo-desc">Average resolution time and customer satisfaction for similar ticket types. Rewards proven competence.</div>
+    </div>
+  </div>
+
+  <div class="info-banner">
+    <i class="fas fa-circle-info"></i>
+    <p>
+      <strong>Note:</strong> All weights are configurable by the team admin. The algorithm also supports
+      hard constraints (e.g., "VIP tickets → senior agents only") and affinity rules
+      (e.g., "same customer → same agent when possible").
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SECTION 3 : SAMPLE GUI                    -->
+<!-- ══════════════════════════════════════════ -->
+<section id="gui" class="section">
+  <div class="section-header">
+    <div class="section-label">03 — Interactive Mockup</div>
+    <h1 class="section-title">Dashboard <span class="highlight">Preview</span></h1>
+    <p class="section-desc">
+      A functional mockup of the AutoAssign management dashboard. Interact with the
+      sidebar, trigger a simulated assignment, and explore the ticket queue.
+    </p>
+  </div>
+
+  <div class="gui-mockup">
+    <div class="gui-titlebar">
+      <div class="gui-dots">
+        <div class="gui-dot red"></div>
+        <div class="gui-dot yellow"></div>
+        <div class="gui-dot green"></div>
+      </div>
+      <div class="gui-titlebar-text">AutoAssign — Dashboard</div>
+      <div style="width:52px;"></div>
+    </div>
+
+    <div class="gui-layout">
+      <!-- Sidebar -->
+      <div class="gui-sidebar">
+        <div class="gui-sidebar-header">Navigation</div>
+        <button class="gui-sidebar-item active" onclick="switchGuiView('dashboard', this)">
+          <i class="fas fa-gauge-high"></i> Dashboard
+        </button>
+        <button class="gui-sidebar-item" onclick="switchGuiView('queue', this)">
+          <i class="fas fa-layer-group"></i> Ticket Queue
+          <span class="gui-sidebar-count" id="queueCount">12</span>
+        </button>
+        <button class="gui-sidebar-item" onclick="switchGuiView('team', this)">
+          <i class="fas fa-users"></i> Team
+          <span class="gui-sidebar-count">52</span>
+        </button>
+        <button class="gui-sidebar-item" onclick="switchGuiView('rules', this)">
+          <i class="fas fa-sliders"></i> Rules Engine
+        </button>
+        <button class="gui-sidebar-item" onclick="switchGuiView('logs', this)">
+          <i class="fas fa-scroll"></i> Audit Log
+        </button>
+        <div class="gui-sidebar-header" style="margin-top: 12px;">Settings</div>
+        <button class="gui-sidebar-item" onclick="switchGuiView('config', this)">
+          <i class="fas fa-gear"></i> Configuration
+        </button>
+        <button class="gui-sidebar-item" onclick="switchGuiView('integrations', this)">
+          <i class="fas fa-plug"></i> Integrations
+        </button>
+      </div>
+
+      <!-- Main Content -->
+      <div class="gui-main" id="guiMainContent">
+        <!-- Dashboard View (default) -->
+        <div id="view-dashboard" class="gui-view">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Dashboard Overview</div>
+            <div class="gui-controls">
+              <button class="gui-btn gui-btn-primary" onclick="simulateAssignment()">
+                <i class="fas fa-bolt"></i> Simulate Assignment
+              </button>
+              <button class="gui-btn gui-btn-secondary">
+                <i class="fas fa-arrows-rotate"></i> Refresh
+              </button>
+            </div>
+          </div>
+
+          <div class="stats-bar">
+            <div class="stat-item">
+              <div class="stat-value cyan" id="statAssigned">847</div>
+              <div class="stat-label">Assigned Today</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value orange" id="statPending">12</div>
+              <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value blue" id="statAvgTime">1.4s</div>
+              <div class="stat-label">Avg Assign Time</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value rose" id="statSLA">98.6%</div>
+              <div class="stat-label">SLA Compliance</div>
+            </div>
+          </div>
+
+          <!-- Recent Assignments Table -->
+          <div style="overflow-x:auto;">
+            <table class="ticket-table">
+              <thead>
+                <tr>
+                  <th>Ticket</th>
+                  <th>Summary</th>
+                  <th>Priority</th>
+                  <th>Assigned To</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="ticketTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Workload -->
+          <div class="workload-section">
+            <div class="workload-title"><i class="fas fa-chart-bar"></i> Team Workload (Top 6)</div>
+            <div id="workloadBars">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Queue View -->
+        <div id="view-queue" class="gui-view" style="display:none;">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Unassigned Queue</div>
+            <div class="gui-controls">
+              <button class="gui-btn gui-btn-primary" onclick="autoAssignAll()">
+                <i class="fas fa-wand-magic-sparkles"></i> Auto-Assign All
+              </button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="ticket-table">
+              <thead>
+                <tr>
+                  <th>Ticket</th>
+                  <th>Summary</th>
+                  <th>Priority</th>
+                  <th>Category</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="queueTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Team View -->
+        <div id="view-team" class="gui-view" style="display:none;">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Team Members</div>
+          </div>
+          <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+          </div>
+        </div>
+
+        <!-- Rules View -->
+        <div id="view-rules" class="gui-view" style="display:none;">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Rules Engine</div>
+            <div class="gui-controls">
+              <button class="gui-btn gui-btn-primary"><i class="fas fa-plus"></i> New Rule</button>
+            </div>
+          </div>
+          <div id="rulesContainer"></div>
+        </div>
+
+        <!-- Logs View -->
+        <div id="view-logs" class="gui-view" style="display:none;">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Audit Log</div>
+          </div>
+          <div id="logsContainer" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);line-height:2;"></div>
+        </div>
+
+        <!-- Config View -->
+        <div id="view-config" class="gui-view" style="display:none;">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Configuration</div>
+          </div>
+          <div id="configContainer"></div>
+        </div>
+
+        <!-- Integrations View -->
+        <div id="view-integrations" class="gui-view" style="display:none;">
+          <div class="gui-main-header">
+            <div class="gui-main-title">Integrations</div>
+          </div>
+          <div id="integrationsContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-banner">
+    <i class="fas fa-hand-pointer"></i>
+    <p>
+      <strong>Interactive:</strong> Click the sidebar items to explore different views.
+      Press <strong>"Simulate Assignment"</strong> on the dashboard to watch a live ticket
+      assignment with animated feedback.
+    </p>
+  </div>
+</section>
+
+<script>
+/* ── Section Switching ── */
+function switchSection(id, btn) {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── GUI View Switching ── */
+function switchGuiView(view, btn) {
+  document.querySelectorAll('.gui-view').forEach(function(v) { v.style.display = 'none'; });
+  document.querySelectorAll('.gui-sidebar-item').forEach(function(b) { b.classList.remove('active'); });
+  var el = document.getElementById('view-' + view);
+  if (el) el.style.display = 'block';
+  if (btn) btn.classList.add('active');
+}
+
+/* ── Sample Data ── */
+var agents = [
+  { name: 'J. Kim', initials: 'JK', color: '#3B82F6', skills: ['networking','firewall','vpn'], load: 3, capacity: 8 },
+  { name: 'S. Patel', initials: 'SP', color: '#A855F7', skills: ['sap','erp','database'], load: 5, capacity: 8 },
+  { name: 'M. Chen', initials: 'MC', color: '#00E5CC', skills: ['windows','active-directory','exchange'], load: 6, capacity: 8 },
+  { name: 'A. Lopez', initials: 'AL', color: '#FF6B35', skills: ['linux','cloud','aws'], load: 2, capacity: 8 },
+  { name: 'R. Singh', initials: 'RS', color: '#FB7185', skills: ['security','iam','compliance'], load: 7, capacity: 8 },
+  { name: 'T. Novak', initials: 'TN', color: '#22C55E', skills: ['helpdesk','hardware','printing'], load: 4, capacity: 8 },
+  { name: 'L. Tanaka', initials: 'LT', color: '#FBBF24', skills: ['networking','dns','monitoring'], load: 1, capacity: 8 },
+  { name: 'E. Okafor', initials: 'EO', color: '#818CF8', skills: ['sap','middleware','integration'], load: 5, capacity: 8 },
+];
+
+var tickets = [
+  { id: 'INC0041287', summary: 'VPN tunnel dropping intermittently for remote users', priority: 'critical', assignee: 0, status: 'assigned' },
+  { id: 'INC0041288', summary: 'SAP transport request failing in QA environment', priority: 'high', assignee: 1, status: 'assigned' },
+  { id: 'INC0041289', summary: 'Exchange mailbox quota exceeded — exec team', priority: 'high', assignee: 2, status: 'assigned' },
+  { id: 'INC0041290', summary: 'AWS EC2 instance unreachable in us-east-1', priority: 'critical', assignee: 3, status: 'assigned' },
+  { id: 'INC0041291', summary: 'Password policy not enforcing MFA on new accounts', priority: 'medium', assignee: 4, status: 'assigned' },
+  { id: 'INC0041292', summary: 'Printer on Floor 3 showing offline status', priority: 'low', assignee: 5, status: 'resolved' },
+  { id: 'INC0041293', summary: 'DNS resolution failures for internal domains', priority: 'high', assignee: 6, status: 'assigned' },
+  { id: 'INC0041294', summary: 'SAP IDOC interface errors with vendor system', priority: 'medium', assignee: 7, status: 'assigned' },
+];
+
+var queueTickets = [
+  { id: 'INC0041295', summary: 'Citrix session freezing after Windows update', priority: 'high', category: 'Windows / Citrix', created: '2 min ago' },
+  { id: 'INC0041296', summary: 'Network switch port flapping in Building B', priority: 'critical', category: 'Networking', created: '5 min ago' },
+  { id: 'INC0041297', summary: 'SharePoint site permissions audit request', priority: 'low', category: 'Collaboration', created: '8 min ago' },
+  { id: 'INC0041298', summary: 'SSL certificate expiring in 3 days for portal', priority: 'high', category: 'Security', created: '12 min ago' },
+  { id: 'INC0041299', summary: 'New hire laptop provisioning — Marketing team', priority: 'medium', category: 'Hardware', created: '15 min ago' },
+];
+
+/* ── Render Functions ── */
+function renderTicketTable() {
+  var tbody = document.getElementById('ticketTableBody');
+  var html = '';
+  tickets.forEach(function(t) {
+    var a = agents[t.assignee];
+    html += '<tr>' +
+      '<td><span class="ticket-id">' + t.id + '</span></td>' +
+      '<td>' + t.summary + '</td>' +
+      '<td><span class="ticket-priority priority-' + t.priority + '">' +
+        '<i class="fas fa-circle" style="font-size:6px;"></i> ' +
+        t.priority.charAt(0).toUpperCase() + t.priority.slice(1) +
+      '</span></td>' +
+      '<td><div class="assignee-cell">' +
+        '<div class="assignee-avatar" style="background:' + a.color + ';">' + a.initials + '</div>' +
+        '<span class="assignee-name">' + a.name + '</span>' +
+      '</div></td>' +
+      '<td><span class="ticket-status status-' + t.status + '">' +
+        '<span class="status-dot"></span> ' +
+        t.status.charAt(0).toUpperCase() + t.status.slice(1) +
+      '</span></td>' +
+    '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function renderWorkloadBars() {
+  var container = document.getElementById('workloadBars');
+  var sorted = agents.slice().sort(function(a, b) { return b.load - a.load; }).slice(0, 6);
+  var html = '';
+  var colors = ['#FB7185','#FF6B35','#A855F7','#3B82F6','#00E5CC','#22C55E'];
+  sorted.forEach(function(a, i) {
+    var pct = Math.round((a.load / a.capacity) * 100);
+    html += '<div class="workload-row">' +
+      '<span class="workload-name">' + a.name + '</span>' +
+      '<div class="workload-bar-bg"><div class="workload-bar-fill" style="width:' + pct + '%;background:' + colors[i] + ';"></div></div>' +
+      '<span class="workload-percent">' + pct + '%</span>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderQueueTable() {
+  var tbody = document.getElementById('queueTableBody');
+  var html = '';
+  queueTickets.forEach(function(t) {
+    html += '<tr>' +
+      '<td><span class="ticket-id">' + t.id + '</span></td>' +
+      '<td>' + t.summary + '</td>' +
+      '<td><span class="ticket-priority priority-' + t.priority + '">' +
+        '<i class="fas fa-circle" style="font-size:6px;"></i> ' +
+        t.priority.charAt(0).toUpperCase() + t.priority.slice(1) +
+      '</span></td>' +
+      '<td>' + t.category + '</td>' +
+      '<td style="color:var(--text-muted);font-size:12px;">' + t.created + '</td>' +
+    '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function renderTeamGrid() {
+  var container = document.getElementById('teamGrid');
+  var html = '';
+  agents.forEach(function(a) {
+    var pct = Math.round((a.load / a.capacity) * 100);
+    html += '<div class="card" style="padding:20px;text-align:center;">' +
+      '<div class="assignee-avatar" style="background:' + a.color + ';width:48px;height:48px;font-size:16px;margin:0 auto 12px;">' + a.initials + '</div>' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + a.name + '</div>' +
+      '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">' + a.skills.slice(0,2).join(', ') + '</div>' +
+      '<div class="workload-bar-bg" style="height:6px;margin-bottom:4px;"><div class="workload-bar-fill" style="width:' + pct + '%;background:' + a.color + ';"></div></div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text-muted);">' + a.load + '/' + a.capacity + ' tickets</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderRules() {
+  var container = document.getElementById('rulesContainer');
+  var rules = [
+    { name: 'VIP Escalation', desc: 'Tickets from VIP customers → Senior agents only', active: true },
+    { name: 'P1 Auto-Notify', desc: 'All P1 tickets → immediate Slack alert to on-call lead', active: true },
+    { name: 'Same-Customer Affinity', desc: 'Repeat tickets from same caller → prefer same agent', active: true },
+    { name: 'Overnight Queue Hold', desc: 'Tickets created 22:00–06:00 → hold for morning shift', active: false },
+    { name: 'Capacity Hard Limit', desc: 'Never assign if agent has 8+ open tickets', active: true },
+  ];
+  var html = '';
+  rules.forEach(function(r) {
+    var stateColor = r.active ? 'var(--accent-cyan)' : 'var(--text-muted)';
+    var stateText = r.active ? 'Active' : 'Inactive';
+    html += '<div class="card" style="padding:16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:16px;">' +
+      '<div><div style="font-weight:700;font-size:14px;margin-bottom:2px;">' + r.name + '</div>' +
+      '<div style="font-size:12px;color:var(--text-secondary);">' + r.desc + '</div></div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:' + stateColor + ';white-space:nowrap;padding:4px 10px;border-radius:6px;background:' + (r.active ? 'rgba(0,229,204,0.08)' : 'rgba(255,255,255,0.04)') + ';">' + stateText + '</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderLogs() {
+  var container = document.getElementById('logsContainer');
+  var logs = [
+    { time: '14:32:01', msg: '[ASSIGN] INC0041287 → J. Kim (skill:networking 95%, load:3/8)' },
+    { time: '14:31:45', msg: '[ASSIGN] INC0041288 → S. Patel (skill:sap 92%, load:5/8)' },
+    { time: '14:31:22', msg: '[CLASSIFY] INC0041288 → tags:[sap, erp, transport] priority:0.78' },
+    { time: '14:31:18', msg: '[INGEST] INC0041288 detected in queue — unassigned' },
+    { time: '14:30:55', msg: '[ASSIGN] INC0041289 → M. Chen (skill:exchange 88%, load:6/8)' },
+    { time: '14:30:12', msg: '[ESCALATE] INC0041290 → P1 alert sent to on-call lead' },
+    { time: '14:29:47', msg: '[ASSIGN] INC0041290 → A. Lopez (skill:aws 97%, load:2/8)' },
+    { time: '14:28:33', msg: '[SKIP] R. Singh capacity at 7/8 — deprioritised for INC0041291' },
+  ];
+  var html = '';
+  logs.forEach(function(l) {
+    var coloredMsg = l.msg
+      .replace(/\[ASSIGN\]/g, '<span style="color:var(--accent-cyan);">[ASSIGN]</span>')
+      .replace(/\[CLASSIFY\]/g, '<span style="color:var(--accent-orange);">[CLASSIFY]</span>')
+      .replace(/\[INGEST\]/g, '<span style="color:var(--accent-blue);">[INGEST]</span>')
+      .replace(/\[ESCALATE\]/g, '<span style="color:var(--accent-rose);">[ESCALATE]</span>')
+      .replace(/\[SKIP\]/g, '<span style="color:var(--text-muted);">[SKIP]</span>');
+    html += '<div><span style="color:var(--text-muted);">' + l.time + '</span> ' + coloredMsg + '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderConfig() {
+  var container = document.getElementById('configContainer');
+  var settings = [
+    { label: 'Skill Match Weight', value: '40%', type: 'range' },
+    { label: 'Workload Weight', value: '30%', type: 'range' },
+    { label: 'Availability Weight', value: '20%', type: 'range' },
+    { label: 'Performance Weight', value: '10%', type: 'range' },
+    { label: 'Max Tickets per Agent', value: '8', type: 'number' },
+    { label: 'Re-queue Interval', value: '60s', type: 'text' },
+    { label: 'Auto-Escalation After', value: '15 min', type: 'text' },
+  ];
+  var html = '';
+  settings.forEach(function(s) {
+    html += '<div class="card" style="padding:14px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">' +
+      '<span style="font-size:14px;">' + s.label + '</span>' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:13px;color:var(--accent-cyan);padding:4px 12px;background:rgba(0,229,204,0.08);border-radius:6px;">' + s.value + '</span>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderIntegrations() {
+  var container = document.getElementById('integrationsContainer');
+  var integrations = [
+    { name: 'ServiceNow', icon: 'fa-snowflake', status: 'Connected', color: 'var(--accent-cyan)' },
+    { name: 'Slack', icon: 'fa-hashtag', status: 'Connected', color: 'var(--accent-cyan)' },
+    { name: 'Microsoft Teams', icon: 'fa-comments', status: 'Not configured', color: 'var(--text-muted)' },
+    { name: 'PagerDuty', icon: 'fa-bell', status: 'Connected', color: 'var(--accent-cyan)' },
+    { name: 'Jira', icon: 'fa-list-check', status: 'Not configured', color: 'var(--text-muted)' },
+  ];
+  var html = '';
+  integrations.forEach(function(ig) {
+    html += '<div class="card" style="padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;gap:16px;">' +
+      '<div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text-secondary);"><i class="fas ' + ig.icon + '"></i></div>' +
+      '<div style="flex:1;"><div style="font-weight:700;font-size:14px;">' + ig.name + '</div></div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:' + ig.color + ';">' + ig.status + '</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+}
+
+/* ── Simulate Assignment Animation ── */
+var simCounter = 0;
+
+function simulateAssignment() {
+  if (queueTickets.length === 0) return;
+
+  var ticket = queueTickets.shift();
+  simCounter++;
+  var assignee = agents[simCounter % agents.length];
+
+  // Flash effect on stats
+  var statEl = document.getElementById('statAssigned');
+  var pendEl = document.getElementById('statPending');
+  var currentVal = parseInt(statEl.textContent);
+  statEl.textContent = currentVal + 1;
+  statEl.style.transition = 'transform 0.2s';
+  statEl.style.transform = 'scale(1.2)';
+  setTimeout(function() { statEl.style.transform = 'scale(1)'; }, 300);
+
+  var pendVal = parseInt(pendEl.textContent);
+  if (pendVal > 0) pendEl.textContent = pendVal - 1;
+
+  // Add to assigned table
+  tickets.unshift({
+    id: ticket.id,
+    summary: ticket.summary,
+    priority: ticket.priority,
+    assignee: simCounter % agents.length,
+    status: 'assigned'
+  });
+
+  // Increment agent load
+  assignee.load = Math.min(assignee.load + 1, assignee.capacity);
+
+  renderTicketTable();
+  renderWorkloadBars();
+  renderQueueTable();
+  document.getElementById('queueCount').textContent = queueTickets.length;
+
+  // Highlight new row
+  var firstRow = document.querySelector('#ticketTableBody tr');
+  if (firstRow) {
+    firstRow.style.background = 'rgba(0,229,204,0.08)';
+    setTimeout(function() { firstRow.style.background = ''; }, 2000);
+  }
+}
+
+function autoAssignAll() {
+  if (queueTickets.length === 0) return;
+  var interval = setInterval(function() {
+    if (queueTickets.length === 0) {
+      clearInterval(interval);
+      switchGuiView('dashboard', document.querySelector('.gui-sidebar-item'));
+      return;
+    }
+    simulateAssignment();
+  }, 600);
+}
+
+/* ── Dark Mode Detection ── */
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.documentElement.classList.add('dark');
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(event) {
+  if (event.matches) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+});
+
+/* ── Init ── */
+renderTicketTable();
+renderWorkloadBars();
+renderQueueTable();
+renderTeamGrid();
+renderRules();
+renderLogs();
+renderConfig();
+renderIntegrations();
+</script>
+</body>
+</html>
